@@ -205,3 +205,9 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Always advised to run the data collection pipeline before any model development
+data/
+
+# Models are large binary files, not suitable for version control
+models/
