@@ -2,6 +2,7 @@ import json
 import pandas as pd
 from pathlib import Path
 from traffic_forensics import ForensicAnalyzer
+from data_loader import WikiResearchFetcher
 
 def analyze_all_data(data_dir="./data"):
     print(f"--- Running Traffic Forensics on Data in '{data_dir}' ---")
@@ -21,20 +22,11 @@ def analyze_all_data(data_dir="./data"):
 
     for file in json_files:
         try:
-            with open(file, 'r') as f:
-                data = json.load(f)
+            # Load using the centralized data loader
+            article_name, traffic_series = WikiResearchFetcher.load_traffic_from_file(file)
             
-            if 'items' not in data or not data['items']:
+            if traffic_series is None:
                 continue
-
-            # Create DataFrame for this article
-            items = data['items']
-            df = pd.DataFrame(items)
-            df['pageviews'] = df['views'] # Rename for consistency if needed, though Analyzer uses arguments
-            
-            # Extract traffic series
-            traffic_series = df['views']
-            article_name = items[0]['article'].replace('_', ' ')
 
             # Run Analysis
             veracity = analyzer.calculate_veracity_score(traffic_series)
