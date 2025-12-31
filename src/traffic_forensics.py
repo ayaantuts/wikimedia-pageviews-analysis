@@ -56,8 +56,8 @@ class ForensicAnalyzer:
         # # Avoid division by zero
         normalized_strength = (weekly_energy / total_energy) if total_energy > 0 else 0
 
-        # # Threshold: In organic traffic, weekly cycle usually holds >10% of total variance
-        has_heartbeat = normalized_strength > 0.10
+        # # Threshold: In organic traffic, weekly cycle usually holds > 2% of total variance (tuned down from 10%)
+        has_heartbeat = normalized_strength > 0.02
 
         return {
             'has_heartbeat': has_heartbeat,
@@ -78,6 +78,10 @@ class ForensicAnalyzer:
             dict: {'is_natural': bool, 'p_value': float}
         """
         # 1. Extract Leading Digits (must be non-zero)
+        # Check for data span. If range is too narrow, Benford's Law is not applicable.
+        if traffic_series.max() / (traffic_series.min() + 1e-9) < 10:
+             return {'skipped': True, 'reason': 'Data range too narrow'}
+
         counts = traffic_series[traffic_series > 0].astype(str)
         leading_digits = counts.str[0].astype(int)
 
@@ -116,24 +120,24 @@ class ForensicAnalyzer:
         fft_res = self.run_spectral_analysis(traffic_series)
         benford_res = self.run_benford_test(traffic_series)
 
-        score = 0.0
-
         # Weighting Logic
+        # Base confidence for having data
+        score = 0.4
+        
         if 'error' not in fft_res:
-             # # If it has a heartbeat, +50% trust. If the heartbeat is VERY strong, max out.
-             score += min(fft_res['weekly_strength'] * 4, 0.5)
+             # # FFT Contribution: Up to 0.4 points
+             # # Scaled: strength * 5 (so 0.08 strength gives full 0.4 points)
+             score += min(fft_res['weekly_strength'] * 5, 0.4)
 
-        if 'error' not in benford_res:
-            # # If P-value is high (very natural), +50% trust
-            # # If P-value is low (<0.05), it adds 0.
-            if benford_res['is_natural']:
-                score += 0.5
+        if 'skipped' in benford_res or benford_res.get('is_natural', False):
+            # # Benford Bonus: +0.2 if passed OR if the test was not applicable
+            score += 0.2
 
         return {
             'veracity_score': round(score, 2),
             'details': {
                 'fft': fft_res.get('weekly_strength', 0),
-                'benford_p': benford_res.get('p_value', 0)
+                'benford_p': benford_res.get('p_value', -1) # -1 indicates skipped/error
             }
         }
 

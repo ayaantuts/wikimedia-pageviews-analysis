@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import time
 
 import json
+import numpy as np
 from pathlib import Path
 
 class WikiResearchFetcher:
@@ -198,13 +199,45 @@ if __name__ == "__main__":
 	fetcher = WikiResearchFetcher()
 
 	start = datetime(2025, 1, 1)
-	end = datetime(2025, 10, 3) # Using your example date range
+	end = datetime(2025, 10, 3) 
+	
 
-	# Get the complete forensic dataset
-	df = fetcher.get_research_dataset("Influenza", start, end)
 
-	print(df.head())
-	print(f"\nDataset Shape: {df.shape}")
 
-	# Save for Phase 2 (Analysis)
-	df.to_csv("influenza_research_data.csv")
+	articles = ["School", "Office", "Deaths_in_2025", "Python_(programming_language)"]
+	
+	# Ensure data directory exists
+	data_dir = Path("data")
+	data_dir.mkdir(exist_ok=True)
+
+	print(f"--- Fetching data for {len(articles)} articles ---")
+
+	for article in articles:
+		try:
+			print(f"Processing: {article}")
+			# Get the complete forensic dataset
+			df = fetcher.get_research_dataset(article, start, end)
+			
+			if not df.empty:
+				filename = data_dir / f"{article}_research_data.csv"
+				df.to_csv(filename)
+				print(f"Saved: {filename}")
+			else:
+				print(f"No data found for {article}")
+				
+		except Exception as e:
+			print(f"Failed to fetch {article}: {e}")
+
+	# Generate Synthetic Bot Data for Verification
+	print("\n--- Generating Synthetic Bot Attack Data ---")
+	dates = pd.date_range(start=start, end=end, freq='D')
+	# Random Uniform Distribution (violates Benford, no cycles)
+	bot_views = np.random.randint(100, 10000, size=len(dates))
+	df_bot = pd.DataFrame({'timestamp': dates, 'views_user': bot_views})
+	df_bot.set_index('timestamp', inplace=True)
+	
+	bot_filename = data_dir / "Synthetic_Bot_Attack_research_data.csv"
+	df_bot.to_csv(bot_filename)
+	print(f"Saved: {bot_filename}")
+			
+	print("\nData collection complete.")
