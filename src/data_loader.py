@@ -9,7 +9,7 @@ class WikiResearchFetcher:
 	Designed to support Forensic Traffic Analysis and Knowledge Graph construction.
 	"""
 
-	def __init__(self, project="en.wikipedia", user_agent="ResearchBot/1.0 (fyp_project@google.com)"):
+	def __init__(self, project="en.wikipedia.org", user_agent="ResearchBot/1.0 (fyp_project@google.com)"):
 		"""
 		Args:
 			project (str): The project domain (e.g., 'en.wikipedia').
