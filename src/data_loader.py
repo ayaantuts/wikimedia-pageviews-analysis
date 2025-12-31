@@ -18,7 +18,30 @@ class WikiResearchFetcher:
 		self.project = project
 		self.headers = {"User-Agent": user_agent}
 		self.base_url_rest = f"https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/{project}"
+		self.base_url_summary = f"https://{project}/api/rest_v1/page/related" # <-- NEW ENDPOINT
 		self.base_url_action = f"https://{project}/w/api.php"
+
+	def get_related_pages(self, article):
+		"""
+		Fetches the top 5 contextually related articles.
+		Example: 'Influenza' -> ['Common_cold', 'H1N1', 'Oseltamivir', 'Vaccine', 'Fever']
+		"""
+		url = f"{self.base_url_summary}/{article}"
+		try:
+			response = requests.get(url, headers=self.headers)
+			if response.status_code == 200:
+				data = response.json()
+				# Extract titles from the 'pages' list
+				related_titles = [page['title'] for page in data.get('pages', [])[:5]]
+				return related_titles
+			else:
+				print(f"Warning: Could not fetch related pages for {article}")
+				# TODO: Remove this line in prod
+				# return ['Common_cold', 'H1N1', 'Oseltamivir', 'Vaccine', 'Fever']
+				return []
+		except Exception as e:
+			print(f"Error fetching related pages: {e}")
+			return []
 
 	def fetch_pageviews_daily(self, article, start_date, end_date, agent_type='user'):
 		"""
@@ -149,19 +172,45 @@ class WikiResearchFetcher:
 		full_df.fillna(0, inplace=True)
 
 		return full_df
+	
+	def fetch_cluster_data(self, main_article, start_date, end_date):
+		"""
+		Fetches data for the Main Article AND its Related Cluster.
+		Returns a dictionary of DataFrames.
+		"""
+		cluster_data = {}
+		
+		# 1. Fetch Main Article
+		print(f"Fetching Main: {main_article}")
+		cluster_data[main_article] = self.get_research_dataset(main_article, start_date, end_date)
+		
+		# 2. Discover & Fetch Related Articles
+		related_pages = self.get_related_pages(main_article)
+		print(f"Found Related: {related_pages}")
+		
+		for related in related_pages:
+			print(f"  Fetching Related: {related}")
+			# We reuse the existing get_research_dataset method
+			df = self.get_research_dataset(related, start_date, end_date)
+			if not df.empty:
+				cluster_data[related] = df
+
+		return cluster_data
 
 # --- Usage Example ---
 if __name__ == "__main__":
 	fetcher = WikiResearchFetcher()
 
-	start = datetime(2025, 1, 1)
-	end = datetime(2025, 10, 3) # Using your example date range
+	start = datetime(2015, 1, 1)
+	end = datetime(2025, 12, 30) # Using your example date range
 
 	# Get the complete forensic dataset
-	df = fetcher.get_research_dataset("Influenza", start, end)
+	cluster = fetcher.fetch_cluster_data("Influenza", start, end)
 
-	print(df.head())
-	print(f"\nDataset Shape: {df.shape}")
-
-	# Save for Phase 2 (Analysis)
-	df.to_csv("influenza_research_data.csv")
+	for name, df in cluster.items():
+		print(f"\nDataset for '{name}':")
+		print(df.head())
+		print(f"\nDataset Shape: {df.shape}")
+	
+		# Save for Phase 2 (Analysis)
+		df.to_csv(f"data/{name}_research_data.csv")
