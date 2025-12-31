@@ -108,10 +108,10 @@ class WikiResearchFetcher:
 			df['timestamp'] = pd.to_datetime(df['timestamp'])
 	
 			# Feature Engineering for Research
-			df['date'] = df['timestamp'].dt.date
+			df['timestamp'] = df['timestamp'].dt.date
 			df['size_change'] = df['size'].diff().abs() # Magnitude of change
 	
-			daily_stats = df.groupby('date').agg({
+			daily_stats = df.groupby('timestamp').agg({
 				'revid': 'count',		   # Total Edits
 				'user': 'nunique',		  # Unique Editors (Crowd signal)
 				'size_change': 'sum'		# Total Content Shift
