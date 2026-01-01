@@ -204,7 +204,12 @@ if __name__ == "__main__":
 
 
 
-	articles = ["School", "Office", "Deaths_in_2025", "Python_(programming_language)"]
+
+	articles = [
+		"School", "Office", "Deaths_in_2025", "Python_(programming_language)",
+		"Physics", "Mathematics", "History", "Christmas", 
+		"Bitcoin", "Taylor_Swift"
+	]
 	
 	# Ensure data directory exists
 	data_dir = Path("data")
@@ -239,5 +244,19 @@ if __name__ == "__main__":
 	bot_filename = data_dir / "Synthetic_Bot_Attack_research_data.csv"
 	df_bot.to_csv(bot_filename)
 	print(f"Saved: {bot_filename}")
+
+	# Generate "Spiky Bot" Data (Massive single-day outlier)
+	print("\n--- Generating Spiky Bot Data ---")
+	spiky_views = bot_views.copy()
+	# Inject a massive spike in the middle
+	mid_idx = len(spiky_views) // 2
+	spiky_views[mid_idx] = 50000 # huge spike vs 100-10000 range
+	
+	df_spike = pd.DataFrame({'timestamp': dates, 'views_user': spiky_views})
+	df_spike.set_index('timestamp', inplace=True)
+	
+	spike_filename = data_dir / "Spiky_Bot_Attack_research_data.csv"
+	df_spike.to_csv(spike_filename)
+	print(f"Saved: {spike_filename}")
 			
 	print("\nData collection complete.")

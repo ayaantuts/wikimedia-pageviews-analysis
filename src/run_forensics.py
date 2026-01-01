@@ -3,7 +3,7 @@ import pandas as pd
 from pathlib import Path
 from traffic_forensics import ForensicAnalyzer
 from data_loader import WikiResearchFetcher
-
+from visualization import ResearchDashboard
 
 def analyze_all_csvs(data_dir="data"):
     print(f"--- Running Traffic Forensics on CSVs in '{data_dir}' ---")
@@ -20,9 +20,10 @@ def analyze_all_csvs(data_dir="data"):
         return
 
     analyzer = ForensicAnalyzer()
+    dashboard = ResearchDashboard() 
     
-    print(f"{'Article Name':<40} | {'Score':<5} | {'FFT':<6} | {'Benford P':<10} | {'Status'}")
-    print("-" * 85)
+    print(f"{'Article Name':<30} | {'Score':<5} | {'FFT':<6} | {'Benford':<8} | {'Max Z':<6} | {'AutoC':<6} | {'Status'}")
+    print("-" * 95)
 
     results = []
 
@@ -48,9 +49,14 @@ def analyze_all_csvs(data_dir="data"):
             # Run Analysis
             veracity = analyzer.calculate_veracity_score(traffic_series)
             
+            # Generate Verification Plot
+            dashboard.plot_traffic_volume(traffic_series, article_name)
+            
             score = veracity['veracity_score']
             fft_strength = veracity['details']['fft']
             benford_p = veracity['details']['benford_p']
+            max_z = veracity['details']['max_z']
+            autocorr = veracity['details']['autocorr']
             
             status = "OK"
             if score < 0.50:
@@ -60,7 +66,7 @@ def analyze_all_csvs(data_dir="data"):
             else:
                 status = "NEUTRAL"
 
-            print(f"{article_name[:40]:<40} | {score:<5} | {fft_strength:<6.4f} | {benford_p:<10.4f} | {status}")
+            print(f"{article_name[:30]:<30} | {score:<5} | {fft_strength:<6.4f} | {benford_p:<8.4f} | {max_z:<6.2f} | {autocorr:<6.2f} | {status}")
             
             results.append(status)
             

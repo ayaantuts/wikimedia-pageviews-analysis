@@ -111,6 +111,45 @@ class ForensicAnalyzer:
             'observed_dist': observed_aligned
         }
 
+    def detect_spikes(self, traffic_series):
+        """
+        Layer 3: Z-Score Spike Detection
+        Identifies sudden, massive bursts of traffic (Z > 3).
+        """
+        mean = traffic_series.mean()
+        std = traffic_series.std()
+        
+        if std == 0:
+            return {'has_spike': False, 'max_z': 0.0}
+
+        z_scores = (traffic_series - mean) / std
+        max_z = z_scores.max()
+        
+        # Threshold: Z > 5 is statistically significant outlier (tuned up from 3)
+        has_spike = max_z > 5.0
+        
+        return {
+            'has_spike': has_spike,
+            'max_z': round(max_z, 2)
+        }
+
+    def check_autocorrelation(self, traffic_series):
+        """
+        Layer 4: Autocorrelation (Lag-1)
+        Checks smoothness. Organic traffic has 'memory' (today is related to yesterday).
+        Bot traffic is often random noise (low correlation).
+        """
+        if len(traffic_series) < 2:
+            return {'autocorr': 0.0, 'is_smooth': False}
+
+        # Calculate Pearson correlation with lag 1
+        autocorr = traffic_series.autocorr(lag=1)
+        
+        return {
+            'autocorr': round(autocorr, 4),
+            'is_smooth': autocorr > 0.5
+        }
+
     def calculate_veracity_score(self, traffic_series):
         """
         The 'Judge' Function.
@@ -119,6 +158,8 @@ class ForensicAnalyzer:
         # Run tests
         fft_res = self.run_spectral_analysis(traffic_series)
         benford_res = self.run_benford_test(traffic_series)
+        spike_res = self.detect_spikes(traffic_series)
+        auto_res = self.check_autocorrelation(traffic_series)
 
         # Weighting Logic
         # Base confidence for having data
@@ -132,12 +173,31 @@ class ForensicAnalyzer:
         if 'skipped' in benford_res or benford_res.get('is_natural', False):
             # # Benford Bonus: +0.2 if passed OR if the test was not applicable
             score += 0.2
+            
+        # # 3. Spike Logic (Refined)
+        # # Bots are "Spiky AND Random". Viral articles are "Spiky but Smooth" (high memory).
+        spike_penalty = 0.0
+        if spike_res['has_spike']:
+            if auto_res['is_smooth']:
+                spike_penalty = 0.1 # Viral event (mild penalty)
+            else:
+                spike_penalty = 0.4 # Bot attack (heavy penalty)
+        score -= spike_penalty
+            
+        # # Reward Smoothness (Organic Growth)
+        if auto_res['is_smooth']:
+            score += 0.1 # Small bonus for organic continuity
+
+        # Clamp score 0 to 1
+        score = max(0.0, min(1.0, score))
 
         return {
             'veracity_score': round(score, 2),
             'details': {
                 'fft': fft_res.get('weekly_strength', 0),
-                'benford_p': benford_res.get('p_value', -1) # -1 indicates skipped/error
+                'benford_p': benford_res.get('p_value', -1),
+                'max_z': spike_res['max_z'],
+                'autocorr': auto_res['autocorr']
             }
         }
 
