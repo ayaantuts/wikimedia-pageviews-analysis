@@ -23,3 +23,4 @@ threadpoolctl==3.6.0
 tzdata==2025.3
 urllib3==2.6.2
 imbalanced-learn # used in model_trainer.py
+schedule # used in server.py

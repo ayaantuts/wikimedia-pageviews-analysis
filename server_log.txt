@@ -1,0 +1,38 @@
+2026-01-02 19:20:45,048 - Starting Daily Analysis Job
+2026-01-02 19:20:46,387 - Job Failed: The feature names should match those that were passed during fit.
+Feature names unseen at fit time:
+- article_code
+- day_of_year
+- month
+- pageviews
+Feature names seen at fit time, yet now missing:
+- edit_ratio_7d
+- editor_diversity
+- is_weekend
+- spider_ratio
+- trust_flag
+- ...
+
+2026-01-02 19:22:46,388 - Starting Daily Analysis Job
+2026-01-02 19:22:47,917 - Job Failed: The feature names should match those that were passed during fit.
+Feature names unseen at fit time:
+- article_code
+- day_of_year
+- month
+- pageviews
+Feature names seen at fit time, yet now missing:
+- edit_ratio_7d
+- editor_diversity
+- is_weekend
+- spider_ratio
+- trust_flag
+- ...
+
+2026-01-02 19:31:47,664 - Starting Daily Analysis Job
+2026-01-02 19:32:23,175 - Job Completed Successfully
+2026-01-02 19:32:23,175 - Starting Daily Analysis Job
+2026-01-02 19:32:59,659 - Job Completed Successfully
+2026-01-02 19:33:34,549 - Starting Daily Analysis Job
+2026-01-02 19:34:11,243 - Job Completed Successfully
+2026-01-02 19:35:11,244 - Starting Daily Analysis Job
+2026-01-02 19:35:48,738 - Job Completed Successfully
