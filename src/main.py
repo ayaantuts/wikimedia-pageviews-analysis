@@ -82,8 +82,8 @@ class DomainMonitor:
 				if self.model:
 					# Select only the columns the model expects
 					X_input = target_row[self.model_loader.feature_cols]
+					prediction = self.model.predict(X_input)[0]
 					proba = self.model.predict_proba(X_input)[0][1] # Confidence score
-					prediction = proba >= 0.9900
 				else:
 					prediction = 0
 					proba = 0.0
@@ -107,7 +107,7 @@ class DomainMonitor:
 
 		# write result to log file
 		with open("run.log", 'a') as f:
-			f.write(f"Time {datetime.today()}")
+			f.write(f"Time {datetime.today()} ")
 			for result in results:
 				f.write(str(result) + '\n')
 		# 6. Generate Domain Report
@@ -168,8 +168,8 @@ if __name__ == "__main__":
 	# Example: Monitor the "Public Health" domain
 	monitor = DomainMonitor(
 		domain_name="Public_Health_Watch",
-		articles=["Coronavirus"]
+		articles=["Crans-Montana"]
 	)
 		
 	# Run analysis for "Yesterday"
-	monitor.analyze_domain_today(datetime(2020, 2, 1))
+	monitor.analyze_domain_today()

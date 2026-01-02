@@ -18,30 +18,35 @@ class WikiResearchFetcher:
 		self.project = project
 		self.headers = {"User-Agent": user_agent}
 		self.base_url_rest = f"https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/{project}"
-		self.base_url_summary = f"https://{project}/api/rest_v1/page/related" # <-- NEW ENDPOINT
 		self.base_url_action = f"https://{project}/w/api.php"
 
-	def get_related_pages(self, article):
+	def get_related_pages(self, article, limit=5):
 		"""
-		Fetches the top 5 contextually related articles.
-		Example: 'Influenza' -> ['Common_cold', 'H1N1', 'Oseltamivir', 'Vaccine', 'Fever']
+		Fetches 'Related Pages' using the 'morelike' search algorithm.
+		This is the engine behind the 'Read More' footer.
 		"""
-		url = f"{self.base_url_summary}/{article}"
+		params = {
+				"action": "query",
+				"format": "json",
+				"list": "search",
+				"srsearch": f"morelike:{article}", # The "Related" magic
+				"srlimit": limit,
+				"srprop": "" # We only need titles, not snippets
+		}
+		
 		try:
-			response = requests.get(url, headers=self.headers)
-			if response.status_code == 200:
+				response = requests.get(self.base_url_action, headers=self.headers, params=params)
 				data = response.json()
-				# Extract titles from the 'pages' list
-				related_titles = [page['title'] for page in data.get('pages', [])[:5]]
-				return related_titles
-			else:
-				print(f"Warning: Could not fetch related pages for {article}")
-				# TODO: Remove this line in prod
-				# return ['Common_cold', 'H1N1', 'Oseltamivir', 'Vaccine', 'Fever']
+				
+				if 'query' in data and 'search' in data['query']:
+					# Extract clean titles
+					related_titles = [item['title'] for item in data['query']['search']]
+					return related_titles
 				return []
+				
 		except Exception as e:
-			print(f"Error fetching related pages: {e}")
-			return []
+				print(f"Error fetching related pages for {article}: {e}")
+				return []
 
 	def fetch_pageviews_daily(self, article, start_date, end_date, agent_type='user'):
 		"""
@@ -135,8 +140,8 @@ class WikiResearchFetcher:
 			df['size_change'] = df['size'].diff().abs() # Magnitude of change
 	
 			daily_stats = df.groupby('timestamp').agg({
-				'revid': 'count',		   # Total Edits
-				'user': 'nunique',		  # Unique Editors (Crowd signal)
+				'revid': 'count',			# Total Edits
+				'user': 'nunique',		# Unique Editors (Crowd signal)
 				'size_change': 'sum'		# Total Content Shift
 			}).rename(columns={
 				'revid': 'edit_count', 
@@ -175,26 +180,25 @@ class WikiResearchFetcher:
 	
 	def fetch_cluster_data(self, main_article, start_date, end_date):
 		"""
-		Fetches data for the Main Article AND its Related Cluster.
-		Returns a dictionary of DataFrames.
+		Fetches the 'Cluster' (Main + 5 Related) to detect localized Bot Attacks.
 		"""
 		cluster_data = {}
 		
-		# 1. Fetch Main Article
+		# 1. Fetch Main
 		print(f"Fetching Main: {main_article}")
 		cluster_data[main_article] = self.get_research_dataset(main_article, start_date, end_date)
 		
-		# 2. Discover & Fetch Related Articles
-		related_pages = self.get_related_pages(main_article)
-		print(f"Found Related: {related_pages}")
+		# 2. Fetch Related
+		related = self.get_related_pages(main_article)
+		print(f"Found Context: {related}")
 		
-		for related in related_pages:
-			print(f"  Fetching Related: {related}")
-			# We reuse the existing get_research_dataset method
-			df = self.get_research_dataset(related, start_date, end_date)
-			if not df.empty:
-				cluster_data[related] = df
-
+		for rel_title in related:
+			# We add a small delay or check to be polite to the API
+			print(f"  Fetching Related: {rel_title}")
+			df_rel = self.get_research_dataset(rel_title, start_date, end_date)
+			if not df_rel.empty:
+				cluster_data[rel_title] = df_rel
+				
 		return cluster_data
 
 # --- Usage Example ---
