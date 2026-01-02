@@ -3,11 +3,55 @@ import pandas as pd
 from datetime import datetime, timedelta
 import time
 
+import json
+import numpy as np
+from pathlib import Path
+
 class WikiResearchFetcher:
 	"""
 	A research-grade data fetcher for Wikimedia projects.
 	Designed to support Forensic Traffic Analysis and Knowledge Graph construction.
 	"""
+
+	@staticmethod
+	def load_traffic_from_file(file_path):
+		"""
+		Loads traffic data from a JSON file into a standardized pandas Series.
+		
+		Args:
+			file_path (str or Path): Path to the JSON file.
+			
+		Returns:
+			tuple: (article_name, traffic_series)
+				- article_name (str): Name of the article.
+				- traffic_series (pd.Series): Daily view counts indexed by datetime.
+		"""
+		try:
+			with open(file_path, 'r') as f:
+				data = json.load(f)
+			
+			if 'items' not in data or not data['items']:
+				return None, None
+
+			items = data['items']
+			df = pd.DataFrame(items)
+			
+			# Ensure we have the right columns
+			if 'views' not in df.columns or 'timestamp' not in df.columns:
+				return None, None
+				
+			# Convert timestamp
+			df['timestamp'] = pd.to_datetime(df['timestamp'], format='%Y%m%d00')
+			df.set_index('timestamp', inplace=True)
+			
+			# Get article name
+			article_name = items[0]['article'].replace('_', ' ')
+			
+			return article_name, df['views']
+			
+		except Exception as e:
+			print(f"Error loading {file_path}: {e}")
+			return None, None
 
 	def __init__(self, project="en.wikipedia.org", user_agent="ResearchBot/1.0 (fyp_project@google.com)"):
 		"""

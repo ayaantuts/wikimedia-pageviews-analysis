@@ -1,7 +1,10 @@
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import seaborn as sns
 import pandas as pd
+import pandas as pd
 import numpy as np
+from pathlib import Path
 
 class ResearchDashboard:
     """
@@ -104,6 +107,37 @@ class ResearchDashboard:
         fig.tight_layout()
         
         return fig
+
+    def plot_traffic_volume(self, traffic_series, article_name="Unknown", output_dir="data/plots"):
+        """
+        Visualizes the raw Traffic Volume (Time Series).
+        Goal: Show the 'Shape' of the traffic to detect Bot Needles vs Human Waves.
+        """
+        plt.figure(figsize=(10, 5))
+        plt.plot(traffic_series.index, traffic_series.values, label='Daily Views', color='#2980b9', alpha=0.8)
+        
+        # Add Mean and Std Dev lines
+        mean = traffic_series.mean()
+        std = traffic_series.std()
+        plt.axhline(mean, color='#27ae60', linestyle='--', label='Mean')
+        plt.axhline(mean + 5*std, color='#c0392b', linestyle='--', label='Spike Threshold (5σ)')
+        
+        plt.title(f"Traffic Volume: {article_name}", fontsize=14, fontweight='bold')
+        plt.xlabel("Date")
+        plt.ylabel("Views")
+        plt.legend()
+        
+        # Format x-axis
+        plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+        plt.gcf().autofmt_xdate()
+        
+        # Save
+        out_path = Path(output_dir)
+        out_path.mkdir(parents=True, exist_ok=True)
+        file_path = out_path / f"{article_name}.png"
+        plt.savefig(file_path)
+        plt.close()
+
 
 # --- Usage Simulation ---
 if __name__ == "__main__":
