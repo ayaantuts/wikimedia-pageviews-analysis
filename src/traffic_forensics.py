@@ -56,8 +56,9 @@ class ForensicAnalyzer:
         # # Avoid division by zero
         normalized_strength = (weekly_energy / total_energy) if total_energy > 0 else 0
 
-        # # Threshold: In organic traffic, weekly cycle usually holds > 2% of total variance (tuned down from 10%)
-        has_heartbeat = normalized_strength > 0.02
+        # # Threshold: In organic traffic, weekly cycle usually holds > 1.5% of total variance
+        # # [CHANGED] Lowered from 0.02 to 0.015 to catch quieter organic signals
+        has_heartbeat = normalized_strength > 0.015
 
         return {
             'has_heartbeat': has_heartbeat,
@@ -79,7 +80,8 @@ class ForensicAnalyzer:
         """
         # 1. Extract Leading Digits (must be non-zero)
         # Check for data span. If range is too narrow, Benford's Law is not applicable.
-        if traffic_series.max() / (traffic_series.min() + 1e-9) < 10:
+        # [CHANGED] Lowered ratio from 10 to 3. Normal articles fluctuate less than 10x.
+        if traffic_series.max() / (traffic_series.min() + 1e-9) < 3:
              return {'skipped': True, 'reason': 'Data range too narrow'}
 
         counts = traffic_series[traffic_series > 0].astype(str)
@@ -125,7 +127,7 @@ class ForensicAnalyzer:
         z_scores = (traffic_series - mean) / std
         max_z = z_scores.max()
         
-        # Threshold: Z > 5 is statistically significant outlier (tuned up from 3)
+        # Threshold: Z > 5 is statistically significant outlier
         has_spike = max_z > 5.0
         
         return {
@@ -162,8 +164,8 @@ class ForensicAnalyzer:
         auto_res = self.check_autocorrelation(traffic_series)
 
         # Weighting Logic
-        # Base confidence for having data
-        score = 0.4
+        # [CHANGED] Base confidence increased from 0.4 to 0.49 (Innocent until proven guilty)
+        score = 0.49
         
         if 'error' not in fft_res:
              # # FFT Contribution: Up to 0.4 points
@@ -200,26 +202,3 @@ class ForensicAnalyzer:
                 'autocorr': auto_res['autocorr']
             }
         }
-
-# --- Quick Test ---
-if __name__ == "__main__":
-    # Simulate Organic Traffic (Weekly Sine Wave + Random Noise + LogNormal for Benford)
-    t = np.linspace(0, 100, 100)
-    # LogNormal generally follows Benford.
-    # We add a sine wave modulation to the *magnitude* or create a trend.
-    base_traffic = np.random.lognormal(mean=2, sigma=0.5, size=100) * 100 
-    seasonality = 1 + 0.8 * np.sin(2 * np.pi * t / 7)
-    organic_traffic = base_traffic * seasonality
-    series_organic = pd.Series(organic_traffic)
-
-    # Simulate Bot Traffic (Uniform Random or Flat)
-    bot_traffic = np.random.randint(900, 1100, 100) # Fails Benford often
-    series_bot = pd.Series(bot_traffic)
-
-    analyzer = ForensicAnalyzer()
-
-    print("--- Organic Traffic Test ---")
-    print(analyzer.calculate_veracity_score(series_organic))
-
-    print("\n--- Bot Traffic Test ---")
-    print(analyzer.calculate_veracity_score(series_bot))

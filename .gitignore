@@ -211,3 +211,7 @@ data/
 
 # Models are large binary files, not suitable for version control
 models/
+
+Influenza_processed_data.csv
+model_v1.pkl
+src/temp.py

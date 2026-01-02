@@ -22,8 +22,9 @@ def analyze_all_csvs(data_dir="data"):
     analyzer = ForensicAnalyzer()
     dashboard = ResearchDashboard() 
     
+    # [CHANGED] Adjusted column width slightly for better alignment
     print(f"{'Article Name':<30} | {'Score':<5} | {'FFT':<6} | {'Benford':<8} | {'Max Z':<6} | {'AutoC':<6} | {'Status'}")
-    print("-" * 95)
+    print("-" * 105)
 
     results = []
 
@@ -58,6 +59,12 @@ def analyze_all_csvs(data_dir="data"):
             max_z = veracity['details']['max_z']
             autocorr = veracity['details']['autocorr']
             
+            # [CHANGED] Handle skipped Benford test for display
+            if benford_p == -1:
+                benford_str = "Skip"
+            else:
+                benford_str = f"{benford_p:.4f}"
+            
             status = "OK"
             if score < 0.50:
                 status = "SUSPICIOUS"
@@ -66,7 +73,8 @@ def analyze_all_csvs(data_dir="data"):
             else:
                 status = "NEUTRAL"
 
-            print(f"{article_name[:30]:<30} | {score:<5} | {fft_strength:<6.4f} | {benford_p:<8.4f} | {max_z:<6.2f} | {autocorr:<6.2f} | {status}")
+            # [CHANGED] Using benford_str instead of raw float
+            print(f"{article_name[:30]:<30} | {score:<5} | {fft_strength:<6.4f} | {benford_str:<8} | {max_z:<6.2f} | {autocorr:<6.2f} | {status}")
             
             results.append(status)
             
@@ -74,7 +82,7 @@ def analyze_all_csvs(data_dir="data"):
             print(f"Error processing {csv_file.name}: {e}")
 
     # Summary
-    print("-" * 85)
+    print("-" * 105)
     suspicious_count = results.count("SUSPICIOUS")
     print(f"\nAnalysis Complete. Found {suspicious_count} suspicious articles out of {len(results)}.")
 
