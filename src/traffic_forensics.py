@@ -202,3 +202,25 @@ class ForensicAnalyzer:
                 'autocorr': auto_res['autocorr']
             }
         }
+    # --- Quick Test ---
+if __name__ == "__main__":
+    # Simulate Organic Traffic (Weekly Sine Wave + Random Noise + LogNormal for Benford)
+    t = np.linspace(0, 100, 100)
+    # LogNormal generally follows Benford.
+    # We add a sine wave modulation to the *magnitude* or create a trend.
+    base_traffic = np.random.lognormal(mean=2, sigma=0.5, size=100) * 100 
+    seasonality = 1 + 0.8 * np.sin(2 * np.pi * t / 7)
+    organic_traffic = base_traffic * seasonality
+    series_organic = pd.Series(organic_traffic)
+
+    # Simulate Bot Traffic (Uniform Random or Flat)
+    bot_traffic = np.random.randint(900, 1100, 100) # Fails Benford often
+    series_bot = pd.Series(bot_traffic)
+
+    analyzer = ForensicAnalyzer()
+
+    print("--- Organic Traffic Test ---")
+    print(analyzer.calculate_veracity_score(series_organic))
+
+    print("\n--- Bot Traffic Test ---")
+    print(analyzer.calculate_veracity_score(series_bot))
